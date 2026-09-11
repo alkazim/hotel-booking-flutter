@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hotel_booking_flutter/data/sample_rooms.dart';
+import 'package:hotel_booking_flutter/logic/booking_calculator.dart';
 import 'package:hotel_booking_flutter/models/room.dart';
 import 'package:hotel_booking_flutter/widgets/room_list.dart';
 
@@ -87,6 +88,12 @@ class _HotelBookingScreenState extends State<HotelBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final result = calculateBooking(
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+      room: selectedRoom,
+    );
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: _navy,
@@ -173,6 +180,14 @@ class _HotelBookingScreenState extends State<HotelBookingScreen> {
                       });
                     },
                   ),
+                  const SizedBox(height: 28),
+                  if (result.errorMessage != null)
+                    _ValidationMessage(message: result.errorMessage!)
+                  else
+                    _BookingSummaryCard(
+                      nights: result.nights,
+                      total: result.total,
+                    ),
                   if (selectedRoom != null) ...[
                     const SizedBox(height: 28),
                     _SelectedRoomSummary(room: selectedRoom!),
@@ -333,4 +348,147 @@ String _formatDate(DateTime date) {
     'Dec',
   ];
   return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
+
+class _ValidationMessage extends StatelessWidget {
+  const _ValidationMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    const errorColor = Color(0xFFB3261E);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: errorColor.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, size: 20, color: errorColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: errorColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingSummaryCard extends StatelessWidget {
+  const _BookingSummaryCard({required this.nights, required this.total});
+
+  final int nights;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9EEF6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _navy.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.nights_stay_outlined, size: 28, color: _navy),
+              SizedBox(width: 12),
+              Text(
+                'Booking Summary',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: _navy,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _StatBlock(label: 'Nights', value: '$nights'),
+              ),
+              Container(
+                width: 1,
+                height: 36,
+                color: _navy.withValues(alpha: 0.15),
+              ),
+              Expanded(
+                child: _StatBlock(
+                  label: 'Total',
+                  value: _formatCurrency(total),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBlock extends StatelessWidget {
+  const _StatBlock({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: _navy,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatCurrency(double amount) {
+  final digits = amount.truncate().toString();
+  final length = digits.length;
+
+  if (length <= 3) return '\u20B9$digits';
+
+  final lastThree = digits.substring(length - 3);
+  var remaining = digits.substring(0, length - 3);
+  final parts = <String>[];
+
+  while (remaining.length > 2) {
+    parts.insert(0, remaining.substring(remaining.length - 2));
+    remaining = remaining.substring(0, remaining.length - 2);
+  }
+  parts.insert(0, remaining);
+
+  return '\u20B9${parts.join(',')},$lastThree';
 }
